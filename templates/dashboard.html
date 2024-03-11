@@ -1,0 +1,26 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <h1>Записи до лікаря</h1>
+    <h2><small>Ваші зписи:</small></h2>
+    <a class="btn btn-secondary" href="/add_appointment">Записатись</a>
+    <hr>
+    <table class="table table-striped">
+        <tr>
+            <th>Місце</th>
+            <th>Дата</th>
+            <th>Статус</th>
+            <th>Деталі</th>
+        </tr>
+        {% for appointment in appointments %}
+            {% if appointment.user_id == session.user_id %}
+                <tr>
+                    <td>{{ appointment.location }}</td>
+                    <td>{{ appointment.date_time }}</td>
+                    <td>{{ appointment.status }}</td>
+                    <td><a class="btn btn-primary" href="{{ url_for('appointment_details', appointment_id=appointment.id) }}">Деталі</a></td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+{% endblock %}

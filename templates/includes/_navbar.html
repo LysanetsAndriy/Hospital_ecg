@@ -1,0 +1,48 @@
+<nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
+  <div class="container-fluid">
+    <span class="navbar-brand" style="color: white;">SluchECG</span>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" aria-current="page" href="/">Головна</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/about">Про нас</a>
+        </li>
+      </ul>
+      {% if session.logged_in %}
+          {% if session.role == 'user' %}
+              <div class="d-flex align-items-center">
+                <a href="/profile" class="btn btn-primary me-2" role="button">Профіль</a>
+                <a href="/dashboard" class="btn btn-primary me-2" role="button">Записи</a>
+                <a href="/logout" class="btn btn-primary me-2" role="button">Вийти</a>
+              </div>
+          {% elif session.role == 'doctor' %}
+              <div class="d-flex align-items-center">
+                <a href="/ecg_check" class="btn btn-primary me-2" role="button">Перевірка ЕКГ</a>
+                <a href="/profile" class="btn btn-primary me-2" role="button">Профіль</a>
+                <a href="/dashboard" class="btn btn-primary me-2" role="button">Записи</a>
+                <a href="/logout" class="btn btn-primary me-2" role="button">Вийти</a>
+              </div>
+          {% elif session.role == 'admin' %}
+              <div class="d-flex align-items-center">
+                <a href="/users" class="btn btn-primary me-2" role="button">Користувачі</a>
+                <a href="/profile" class="btn btn-primary me-2" role="button">Профіль</a>
+                <a href="/dashboard" class="btn btn-primary me-2" role="button">Записи</a>
+                <a href="/logout" class="btn btn-primary me-2" role="button">Вийти</a>
+              </div>
+
+          {% endif %}
+
+        {% else %}
+          <div class="d-flex align-items-center">
+            <a href="/login" class="btn btn-outline-primary me-2" role="button">Увійти</a>
+            <a href="/register" class="btn btn-primary" role="button">Зареєструватись</a>
+          </div>
+        {% endif %}
+    </div>
+  </div>
+</nav>
