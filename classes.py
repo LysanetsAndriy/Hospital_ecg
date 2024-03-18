@@ -6,9 +6,11 @@ import datetime
 from globals import *
 from enum import Enum
 
+
 class Gender(Enum):
     MALE = 'чоловік'
     FEMALE = 'жінка'
+
 
 class Admin(db.Model):
     __tablename__ = 'admin'

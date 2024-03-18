@@ -1,0 +1,20 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <h1>Додати лікарню</h1>
+    <form action="{{ url_for('add_hospital') }}" method="POST">
+        <div class="form-group">
+            <label for="name">Назва</label>
+            {{ form.name(class="form-control") }}
+        </div>
+        <div class="form-group">
+            <label for="location">Адреса</label>
+            {{ form.location(class="form-control") }}
+        </div>
+        <div class="form-group">
+            <label for="contact_number">Телефон</label>
+            {{ form.contact_number(class="form-control") }}
+        </div>
+        <button type="submit" class="btn btn-primary">Додати</button>
+    </form>
+{% endblock %}

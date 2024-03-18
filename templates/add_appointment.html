@@ -1,0 +1,187 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <style>
+    .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1000; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgba(0,0,0,0.4); /* Black with opacity */
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 70%;
+        height: 70%;
+        border-radius: 10px;
+        position: relative; /* Added to make the close button absolute */
+    }
+
+    /* Close button */
+    .close {
+        color: #aaa;
+        position: absolute;
+        top: 5px; /* Adjust as needed */
+        right: 5px; /* Adjust as needed */
+        font-size: 25px; /* Increase the font size */
+        font-weight: bold;
+        cursor: pointer; /* Change the cursor when hovering over the close button */
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+    }
+
+    /* Style the form */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        font-weight: bold;
+    }
+    .search-form {
+        display: flex;
+        justify-content: flex-begin;
+        margin-bottom: 20px;
+    }
+
+    .search-input {
+        width: 300px;
+        height: 35px;
+        border: none;
+        border-radius: 5px;
+        padding: 5px;
+        font-size: 16px;
+    }
+
+    .search-button {
+        height: 35px;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        margin-left: 10px;
+        background-color: #007BFF;
+        color: white;
+        cursor: pointer;
+    }
+
+    /* Style the form */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        font-weight: bold;
+    }
+
+    h1 {
+        font-family: Times New Roman, sans-serif;
+        font-size: 40px;
+        color: #333;
+    }
+
+    h2 {
+        font-family: Georgia, serif;
+        font-size: 30px;
+        color: #333;
+    }
+    </style>
+    <h1><strong>Оберіть лікарню та лікаря</strong></h1>
+    <h2>Список лікарень:</h2>
+    <!-- Search for hospitals -->
+    <form action="{{ url_for('add_appointment') }}" method="GET" class="search-form">
+        <input type="text" name="search" placeholder="Знайти лікарні" class="search-input">
+        <input type="submit" value="Знайти" class="search-button">
+    </form>
+
+    <hr>
+    <!-- Table to display hospitals -->
+    <table class="table table-striped">
+        <tr>
+            <th>Назва</th>
+            <th>Адреса</th>
+            <th>Телефон</th>
+            <th>Дія</th>
+        </tr>
+        {% for hospital in hospitals %}
+            <tr>
+                <td>{{ hospital.name }}</td>
+                <td>{{ hospital.location }}</td>
+                <td>{{ hospital.contact_number }}</td>
+                <td>
+                    <form id="choose_hospital_{{ hospital.id }}" action="{{ url_for('add_appointment', id=hospital.id) }}" method="POST">
+                        <input type="button" value="Обрати" class="btn btn-primary" onclick="chooseDoctor('choose_hospital_{{ hospital.id }}', {{ hospital.id }})">
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+
+    <div id="chooseModal" class="modal">
+        <div class="modal-content">
+            <h1>Оберіть лікаря з обраної вами лікарні:</h1>
+            <table class="table table-striped">
+                <tr>
+                    <th>Прізвище</th>
+                    <th>Ім'я</th>
+                    <th>По батькові</th>
+                    <th>Номер телефону</th>
+                    <th>Електронна пошта</th>
+                    <th></th>
+                </tr>
+                {% for doctor in doctors %}
+                    {% if doctor.hospital_id == 1 %}
+                        <tr>
+                            <td>{{ doctor.surname }}</td>
+                            <td>{{ doctor.name }}</td>
+                            <td>{{ doctor.patronymic }}</td>
+                            <td>{{ doctor.phone_number }}</td>
+                            <td>{{ doctor.email }}</td>
+                            <td>{{ hospitalId }}</td>
+                            <td>
+                                <form id="chooseDoctorModal" action="{{ url_for('choose_hospital', id=doctor.hospital_id) }}" method="POST">
+                                    <input type="hidden" name="doctor_id" value="{{ doctor.id }}">
+                                    <input type="submit" value="Обрати" class="btn btn-primary">
+                                </form>
+
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+            <span class="close" onclick="closeModalHospital()">&times;</span>
+        </div>
+    </div>
+
+    <script>
+        function chooseDoctor(formId, hospitalId)
+        {
+            var chooseModal = document.getElementById('chooseModal');
+            chooseModal.style.display = 'block';
+            chooseModal.dataset.hospitalId = hospitalId; // Use dataset to set the data attribute
+
+            var chooseDoctorModalForm = document.getElementById('chooseDoctorModal');
+            chooseDoctorModalForm.action = document.getElementById(formId).action;
+            chooseDoctorModalForm.dataset.hospitalId = hospitalId;
+            chooseDoctorModalForm.action = chooseDoctorModalForm.action.replace('/add_appointment', '/choose_hospital/' + hospitalId);
+        }
+
+        function closeModalHospital()
+        {
+            document.getElementById('chooseModal').style.display = 'none';
+        }
+    </script>
+
+
+{% endblock %}

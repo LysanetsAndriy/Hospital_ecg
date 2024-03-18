@@ -1,0 +1,161 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <style>
+    .search-form {
+        display: flex;
+        justify-content: flex-begin;
+        margin-bottom: 20px;
+    }
+
+    .search-input {
+        width: 300px;
+        height: 35px;
+        border: none;
+        border-radius: 5px;
+        padding: 5px;
+        font-size: 16px;
+    }
+
+    .search-button {
+        height: 35px;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+        margin-left: 10px;
+        background-color: #007BFF;
+        color: white;
+        cursor: pointer;
+    }
+
+    .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1000; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgba(0,0,0,0.4); /* Black with opacity */
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 50%;
+        border-radius: 10px;
+        position: relative; /* Added to make the close button absolute */
+    }
+
+    /* Close button */
+    .close {
+        color: #aaa;
+        position: absolute;
+        top: 5px; /* Adjust as needed */
+        right: 5px; /* Adjust as needed */
+        font-size: 25px; /* Increase the font size */
+        font-weight: bold;
+        cursor: pointer; /* Change the cursor when hovering over the close button */
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+    }
+
+    /* Style the form */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        font-weight: bold;
+    }
+
+    input[type="password"] {
+        width: calc(100% - 22px);
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+
+    button[type="submit"] {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+
+    }
+
+    h1 {
+            font-family: Times New Roman, sans-serif;
+            font-size: 40px;
+            color: #333;
+        }
+
+    h2 {
+            font-family: Georgia, serif;
+            font-size: 30px;
+            color: #333;
+        }
+    </style>
+    <h1><strong>Лікарні</strong></h1>
+    <a class="btn btn-secondary" href="/add_hospital">Додати лікарню</a>
+    <h2>Список лікарень:</h2>
+    <form action="{{ url_for('hospitals') }}" method="GET" class="search-form">
+        <input type="text" name="search" placeholder="Знайти лікарні" class="search-input">
+        <input type="submit" value="Знайти" class="search-button">
+    </form>
+
+    <hr>
+    <table class="table table-striped">
+        <tr>
+            <th>Назва</th>
+            <th>Адреса</th>
+            <th>Телефон</th>
+            <th></th>
+        </tr>
+        {% for hospital in hospitals %}
+            <tr>
+                <td>{{ hospital.name }}</td>
+                <td>{{ hospital.location }}</td>
+                <td>{{ hospital.contact_number }}</td>
+                <td>
+                    <form id="delete_hospital_{{ hospital.id }}" action="{{ url_for('confirm_delete_hospital', id=hospital.id) }}" method="POST">
+                        <input type="button" value="Delete" class="btn btn-danger" onclick="confirmDelete('delete_hospital_{{ hospital.id }}')">
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h1>Ви впевнені, що хочете видалити цю лікарню? </h1>
+            <p>Щоб підтвердити, уведіть свій пароль:</p>
+            <form id="confirmForm" method="POST" action="">
+                <input type="password" name="password" placeholder="Уведіть пароль" required>
+                <input type="submit" class="btn btn-danger me-2" value="Підтвердити">
+            </form>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+    </div>
+
+    <script>
+        function confirmDelete(formId) {
+            document.getElementById('confirmForm').action = document.getElementById(formId).action;
+            document.getElementById('confirmModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+    </script>
+{% endblock %}

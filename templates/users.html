@@ -1,0 +1,222 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+     <style>
+    .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1000; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgba(0,0,0,0.4); /* Black with opacity */
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 50%;
+        border-radius: 10px;
+        position: relative; /* Added to make the close button absolute */
+    }
+
+    /* Close button */
+    .close {
+        color: #aaa;
+        position: absolute;
+        top: 5px; /* Adjust as needed */
+        right: 5px; /* Adjust as needed */
+        font-size: 25px; /* Increase the font size */
+        font-weight: bold;
+        cursor: pointer; /* Change the cursor when hovering over the close button */
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+    }
+
+    /* Style the form */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        font-weight: bold;
+    }
+
+    input[type="password"] {
+        width: calc(100% - 22px);
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+
+    button[type="submit"] {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+
+    }
+
+    h1 {
+            font-family: Times New Roman, sans-serif;
+            font-size: 40px;
+            color: #333;
+        }
+
+    p {
+            font-family: Georgia, serif;
+            font-size: 20px;
+            color: #666;
+        }
+    </style>
+    <h1><strong>Усі користувачі </strong></h1>
+    <hr>
+    <table class="table table-striped">
+        <tr>
+            <th>Прізвище</th>
+            <th>Ім'я</th>
+            <th>По батькові</th>
+            <th>Електронна адреса</th>
+            <th>Роль</th>
+            <th></th>
+            <th></th>
+        </tr>
+        {% for user in users %}
+            <tr>
+                <td>{{ user.surname }}</td>
+                <td>{{ user.name }}</td>
+                <td>{{ user.patronymic }}</td>
+                <td>{{ user.email }}</td>
+                <td>Користувач</td>
+                <td>
+                    <form id="delete_user_{{ user.id }}" action="{{ url_for('confirm_delete_user', id=user.id) }}" method="POST">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <input type="button" value="Delete" class="btn btn-danger" onclick="confirmDelete('delete_user_{{ user.id }}')">
+                    </form>
+                    <td>
+                        <form id="promote_to_doctor_{{ user.id }}" action="{{ url_for('promote_to_doctor', id=user.id) }}" method="POST">
+                            <input type="button" value="Make Doctor" class="btn btn-primary" onclick="chooseHospital('promote_to_doctor_{{ user.id }}', {{ user.id }})">
+                        </form>
+                    </td>
+                </td>
+            </tr>
+        {% endfor %}
+        {% for doctor in doctors %}
+            <tr>
+                <td>{{ doctor.surname }}</td>
+                <td>{{ doctor.name }}</td>
+                <td>{{ doctor.patronymic }}</td>
+                <td>{{ doctor.email }}</td>
+                <td>Лікар</td>
+                <td>
+                    <form id="delete_doctor_{{ doctor.id }}" action="{{ url_for('confirm_delete_doctor', id=doctor.id) }}" method="POST">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <input type="button" value="Delete" class="btn btn-danger" onclick="confirmDelete('delete_doctor_{{ doctor.id }}')">
+                    </form>
+                    <td>
+                        <form id="demote_to_user_{{ doctor.id }}" action="{{ url_for('demote_to_user', id=doctor.id) }}" method="POST">
+                            <input type="button" value="Make User" class="btn btn-secondary" onclick="confirmDelete('demote_to_user_{{ doctor.id }}')">
+<!--                            <input type="submit" value="Make User" class="btn btn-secondary">-->
+                        </form>
+                    </td>
+                </td>
+            </tr>
+        {% endfor %}
+        {% for admin in admins %}
+            <tr>
+                <td>{{ admin.surname }}</td>
+                <td>{{ admin.name }}</td>
+                <td>{{ admin.patronymic }}</td>
+                <td>{{ admin.email }}</td>
+                <td>Адмін</td>
+                <td></td>
+            </tr>
+        {% endfor %}
+    </table>
+
+    <div id="chooseModal" class="modal">
+        <div class="modal-content">
+            <h1>Оберіть лікарню в яку буде додано обраного лікаря:</h1>
+            <table class="table table-striped">
+                <tr>
+                    <th>Назва</th>
+                    <th>Адреса</th>
+                    <th>Телефон</th>
+                    <th></th>
+                </tr>
+                {% for hospital in hospitals %}
+                    <tr>
+                        <td>{{ hospital.name }}</td>
+                        <td>{{ hospital.location }}</td>
+                        <td>{{ hospital.contact_number }}</td>
+                        <td>
+                            <form id="chooseHospitalModal" action="{{ url_for('promote_to_doctor', id=user_id) }}" method="POST">
+                                <input type="hidden" name="hospital_id" value="{{ hospital.id }}">
+                                <input type="submit" value="Обрати" class="btn btn-primary">
+                            </form>
+
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+            <span class="close" onclick="closeModalDoctor()">&times;</span>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h1>Щоб підтвердити цю дію, уведіть свій пароль: </h1>
+            <form id="confirmForm" method="POST" action="">
+                <input type="password" name="password" placeholder="Уведіть пароль" required>
+                <input type="submit" class="btn btn-danger me-2" value="Підтвердити">
+            </form>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+    </div>
+
+    <div id="confirmPromotionModal" class="modal">
+        <div class="modal-content">
+            <h1>Введіть свій пароль для підтвердження:</h1>
+            <form id="confirmPromotionForm" method="POST" action="">
+                <input type="password" name="password" placeholder="Уведіть пароль" required>
+                <input type="submit" class="btn btn-primary" value="Підтвердити">
+            </form>
+            <span class="close" onclick="closePromotionModal()">&times;</span>
+        </div>
+    </div>
+
+    <script>
+        function confirmDelete(formId) {
+            document.getElementById('confirmForm').action = document.getElementById(formId).action;
+            document.getElementById('confirmModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+
+        function chooseHospital(formId, userId) {
+            document.getElementById('chooseHospitalModal').action = document.getElementById(formId).action;
+            document.getElementById('chooseModal').style.display = 'block';
+            document.getElementById('chooseModal').data.user_id = userId;
+            document.getElementById('chooseHospitalModal').action = document.getElementById('chooseHospitalModal').action.replace('promote_to_doctor', 'promote_to_doctor/' + userId);
+
+        }
+
+
+        function closeModalDoctor() {
+            document.getElementById('chooseModal').style.display = 'none';
+        }
+    </script>
+{% endblock %}

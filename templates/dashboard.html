@@ -7,18 +7,23 @@
     <hr>
     <table class="table table-striped">
         <tr>
+            <th>Лікарня</th>
             <th>Місце</th>
             <th>Дата</th>
+            <th>Лікар</th>
             <th>Статус</th>
             <th>Деталі</th>
         </tr>
         {% for appointment in appointments %}
-            {% if appointment.user_id == session.user_id %}
+            {% if appointment.user_id == session['user_id'] %}
                 <tr>
+<!--                    <td>{{ appointment.hospital_id }}</td>-->
+                    <td></td>
                     <td>{{ appointment.location }}</td>
-                    <td>{{ appointment.date_time }}</td>
+                    <td>{% if appointment.date_time == None %} - {% else %} {{ appointment.date_time }} {% endif %}</td>
+                    <td></td>
                     <td>{{ appointment.status }}</td>
-                    <td><a class="btn btn-primary" href="{{ url_for('appointment_details', appointment_id=appointment.id) }}">Деталі</a></td>
+                    <td><a class="btn btn-primary" href="{{ url_for('appointment', id=appointment.id) }}">Деталі</a></td>
                 </tr>
             {% endif %}
         {% endfor %}

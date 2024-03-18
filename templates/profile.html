@@ -1,0 +1,132 @@
+<!-- profile.html -->
+{% extends 'layout.html' %}
+
+{% block body %}
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <h2 class="card-header">Профіль</h2>
+                    <div class="card-body">
+
+                        <form id="profileForm" action="{{ url_for('update_profile') }}" method="POST">
+                            <ul class="list-group" id="profileInfo">
+                                <li class="list-group-item"><strong>Ім'я:</strong> {{ user.name }}</li>
+                                <li class="list-group-item"><strong>Прізвище:</strong> {{ user.surname }}</li>
+                                <li class="list-group-item"><strong>По батькові:</strong> {{ user.patronymic }}</li>
+                                <li class="list-group-item"><strong>Стать:</strong> {% if user.gender == Gender.MALE %} чоловік {% else %} жінка {% endif %}</li></li>
+                                <li class="list-group-item"><strong>Номер телефону:</strong> {{ user.phone_number }}</li>
+                                <li class="list-group-item"><strong>Електронна адреса:</strong> {{ user.email }}</li>
+                                {% if session['role'] == 'doctor' %}
+                                    <li class="list-group-item"><strong>Лікарня:</strong> {{ hospital_name }}</li>
+                                {% endif %}
+                            </ul>
+                            <div id="editFields" style="display: none;">
+                                <li class="list-group-item">
+                                    <strong>Ім'я:</strong>
+                                    <input type="text" name="name" value="{{ user.name }}" class="form-control mb-2">
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Прізвище:</strong>
+                                    <input type="text" name="surname" value="{{ user.surname }}" class="form-control mb-2">
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>По батькові:</strong>
+                                    <input type="text" name="patronymic" value="{{ user.patronymic }}" class="form-control mb-2">
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Стать:</strong>
+                                    <select name="gender" class="form-control mb-2">
+                                        <option value="MALE" {% if user.gender == Gender.MALE %} selected {% endif %}>чоловік</option>
+                                        <option value="FEMALE" {% if user.gender == Gender.FEMALE %} selected {% endif %}>жінка</option>
+                                    </select>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Номер телефону:</strong>
+                                    <input type="text" name="phone_number" value="{{ user.phone_number }}" class="form-control mb-2">
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Електронна адреса:</strong>
+                                    <input type="email" name="email" value="{{ user.email }}" class="form-control mb-2">
+                                </li>
+
+
+                            </div>
+                            <input type="submit" class="btn btn-primary" value="Редагувати" id="updateBtn" style="display: none;">
+                        </form>
+                        <form id="passwordForm" action="{{ url_for('change_password') }}" method="POST">
+                            <div id="changePassword" style="display: none;">
+                                <li class="list-group-item">
+                                    <strong>Поточний пароль:</strong>
+                                    <input type="password" name="current_password"  class="form-control mb-2">
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Новий Пароль:</strong>
+                                    <input type="password" name="new_password"  class="form-control mb-2">
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Повторіть новий пароль:</strong>
+                                    <input type="password" name="confirm_password"  class="form-control mb-2">
+                                </li>
+
+                            </div>
+
+
+                            <input type="submit" class="btn btn-primary" value="Змінити" id="changeBtn" style="display: none;">
+                        </form>
+                        <button id="editProfileBtn" class="btn btn-primary mb-3">Редагувати профіль</button>
+                        <button id="cancelEditBtn" class="btn btn-secondary mb-3" style="display: none;">Відмінити</button>
+                        <button id="changePasswordBtn" class="btn btn-info mb-3">Змінити пароль</button>
+                        <button id="cancelChangeBtn" class="btn btn-secondary mb-3" style="display: none;">Відмінити</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('editProfileBtn').addEventListener('click', function() {
+            document.getElementById('profileInfo').style.display = 'none';
+            document.getElementById('editFields').style.display = 'block';
+            document.getElementById('updateBtn').style.display = 'block';
+            document.getElementById('cancelEditBtn').style.display = 'block';
+            document.getElementById('changePasswordBtn').style.display = 'none';
+            this.style.display = 'none'; // Hide the "Edit Profile" button
+            document.getElementById('changeBtn').style.display = 'none';
+        });
+
+        document.getElementById('cancelEditBtn').addEventListener('click', function() {
+            document.getElementById('profileInfo').style.display = 'block';
+            document.getElementById('editFields').style.display = 'none';
+            document.getElementById('updateBtn').style.display = 'none';
+            document.getElementById('editProfileBtn').style.display = 'block'; // Show the "Edit Profile" button again
+            document.getElementById('changePasswordBtn').style.display = 'block'; // Show the "Change Password" button again
+            this.style.display = 'none'; // Hide the "Cancel" button
+            document.getElementById('changeBtn').style.display = 'none';
+        });
+
+        document.getElementById('changePasswordBtn').addEventListener('click', function() {
+            document.getElementById('profileInfo').style.display = 'none';
+            document.getElementById('editFields').style.display = 'none';
+            document.getElementById('updateBtn').style.display = 'none';
+            document.getElementById('changePassword').style.display = 'block';
+            document.getElementById('editProfileBtn').style.display = 'none';
+            this.style.display = 'none'; // Hide the "Change password" button
+            document.getElementById('changeBtn').style.display = 'block';
+            document.getElementById('cancelChangeBtn').style.display = 'block';
+        });
+
+        document.getElementById('cancelChangeBtn').addEventListener('click', function() {
+            document.getElementById('profileInfo').style.display = 'block';
+            document.getElementById('editFields').style.display = 'none';
+            document.getElementById('updateBtn').style.display = 'none';
+            document.getElementById('editProfileBtn').style.display = 'block'; // Show the "Edit Profile" button again
+            document.getElementById('changePasswordBtn').style.display = 'block'; // Show the "Change Password" button again
+            document.getElementById('changePassword').style.display = 'none';
+            this.style.display = 'none'; // Hide the "Cancel" button
+            document.getElementById('changeBtn').style.display = 'none';
+            document.getElementById('cancelChangeBtn').style.display = 'none';
+        });
+
+    </script>
+{% endblock %}
