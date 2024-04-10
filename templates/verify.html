@@ -1,0 +1,15 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="registration-form">
+    <h1>Email Verification</h1>
+    <form method="POST" action="{{ url_for('verify') }}">
+        <div class="form-group">
+            <label>Verification Code</label>
+            <input type="text" name="verification_code" class="form-control">
+        </div>
+        <input type="hidden" name="email" value="{{ email }}">
+        <button type="submit" class="btn-primary">Verify Email</button>
+    </form>
+</div>
+{% endblock %}

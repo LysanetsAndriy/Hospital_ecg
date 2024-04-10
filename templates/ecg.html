@@ -1,0 +1,191 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<style>
+    .ecg-container {
+        margin: 20px;
+    }
+    .ecg-details {
+        margin-bottom: 20px;
+    }
+    .ecg-plot {
+        width: 100%;
+        height: 400px; /* Reduced height to accommodate 12 plots */
+    }
+    .result-form {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    .result-form select {
+        width: 100%;
+        height: 150px;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="ecg-container">
+    <div class="ecg-details">
+        <h2>Інформація</h2>
+        <p><strong>ПІБ Пацієнта:</strong> {% if ecg.user == None %} - {% else %} {{ ecg.user.surname + ' ' + ecg.user.name + ' ' + ecg.user.patronymic}} {% endif %}</p>
+        <p><strong>Дата і час завантаження на сайт:</strong> {{ ecg.datetime }}</p>
+        <p><strong>Результат:</strong> {% if ecg.results == None %} - {% else %} {{ ecg.results }} {% endif %}</p>
+        <!-- Checkboxes for setting ECG results -->
+        <form id="result-form" onsubmit="return validateResults();" action="/save_ecg_result/{{ ecg.id }}" method="post">
+            <div>
+                <label><input type="checkbox" name="results" value="Нормальне ЕКГ"> Нормальне ЕКГ</label>
+                <br>
+                <label><input type="checkbox" name="results" value="1dAVb"> 1dAVb (Першого ступеня атріовентрикулярна блокада)</label>
+                <br>
+                <label><input type="checkbox" name="results" value="RBBB"> RBBB (Блокада правої ніжки пучка Гіса)</label>
+                <br>
+                <label><input type="checkbox" name="results" value="LBBB"> LBBB (Блокада лівої ніжки пучка Гіса)</label>
+                <br>
+                <label><input type="checkbox" name="results" value="SB"> SB (Синусова брадикардія)</label>
+                <br>
+                <label><input type="checkbox" name="results" value="AF"> AF (Фібриляція передсердь)</label>
+                <br>
+                <label><input type="checkbox" name="results" value="ST"> ST (Сегмент ST)</label>
+            </div>
+            <button type="submit">Save Results</button>
+        </form>
+    </div>
+    <div>
+        <button onclick="autoCheckECG()">Auto Check ECG</button>
+    </div>
+    <br>
+    <div id="auto-check-results" style="margin-top: 20px;">
+        <h3>Auto Check Results</h3>
+        <table id="results-table" class="table table-striped">
+            <!-- Headers for the conditions -->
+            <tr>
+                <th>Сегмент</th>
+                <th>1dAVb</th>
+                <th>RBBB</th>
+                <th>LBBB</th>
+                <th>SB</th>
+                <th>AF</th>
+                <th>ST</th>
+                <th>Результат</th>
+            </tr>
+            <!-- Results will be populated here by JavaScript -->
+        </table>
+    </div>
+
+    <br>
+    <div>
+        <button onclick="changeSegment('prev')">Previous Segment</button>
+        <input type="number" id="segment-input" value="1" min="1">
+        <button onclick="changeSegment('next')">Next Segment</button>
+        <button onclick="goToSegment()">Go to Segment</button>
+    </div>
+
+    <!-- Create 12 divs for the ECG plots -->
+    {% for i in range(1, 13) %}
+    <div id="ecg-plot-{{i}}" class="ecg-plot"></div>
+    {% endfor %}
+
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        let currentSegment = 1;
+
+        function fetchAndPlotSegment(segment) {
+            fetch(`/get_ecg_data/{{ ecg.id }}/${segment}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update the plots with the new segment data
+                    data.y_values.forEach((leadData, index) => {
+                        var trace = {
+                            x: data.x_values,
+                            y: leadData,
+                            type: 'scatter',
+                            mode: 'lines',
+                            name: 'Lead ' + (index + 1)
+                        };
+
+                        var layout = {
+                            title: 'ECG Lead ' + (index + 1),
+                            xaxis: {
+                                title: 'Sample'
+                            },
+                            yaxis: {
+                                title: 'Voltage'
+                            }
+                        };
+
+                        Plotly.react('ecg-plot-' + (index + 1), [trace], layout);
+                    });
+                })
+                .catch(error => console.error('Error loading ECG data:', error));
+        }
+
+        function changeSegment(direction) {
+            // Increment or decrement the current segment based on the direction
+            if (direction === 'next') {
+                currentSegment += 1;
+            } else if (direction === 'prev') {
+                currentSegment = Math.max(1, currentSegment - 1);
+            }
+            document.getElementById('segment-input').value = currentSegment;
+            fetchAndPlotSegment(currentSegment);
+        }
+
+        function goToSegment() {
+            // Fetch the segment number from the input and plot that segment
+            let segment = document.getElementById('segment-input').value;
+            currentSegment = parseInt(segment, 10);
+            fetchAndPlotSegment(currentSegment);
+        }
+
+        // Initialize the first segment plots
+        fetchAndPlotSegment(1);
+    </script>
+</div>
+
+<script>
+    // JavaScript functions for segment changes and plotting as before
+
+    function validateResults() {
+        const checkboxes = document.querySelectorAll('input[name="results"]');
+        const normalEcgCheckbox = document.querySelector('input[name="results"][value="Нормальне ЕКГ"]');
+        const isNormalEcgSelected = normalEcgCheckbox.checked;
+        const isAnyOtherSelected = Array.from(checkboxes).some(chk => chk.checked && chk.value !== 'Нормальне ЕКГ');
+
+        if (isNormalEcgSelected && isAnyOtherSelected) {
+            alert('ECG cannot be Normal and have other classifications at the same time.');
+            return false; // Prevent form submission
+        }
+
+        return true; // Allow form submission
+    }
+</script>
+<script>
+    function autoCheckECG() {
+        fetch(`/auto_check/{{ ecg.id }}`)
+            .then(response => response.json())
+            .then(data => {
+                const resultsTable = document.getElementById('results-table');
+
+                // Start from row 1 to skip header row
+                for (let i = 1; i <= data.length; i++) {
+                    const probs = data[i - 1];  // Get the probabilities for the i-th segment
+                    let row = `<tr><td>${i}</td>`;
+                    probs.forEach(prob => {
+                        row += `<td>${(prob * 100).toFixed(2)}%</td>`;
+                    });
+                    // Define your column names
+                    let columnNames = ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST'];
+
+                    // add the final result that has all columns names which probability is higher then 0.25
+                    let result = probs.map((prob, index) => prob > 0.3 ? columnNames[index] : null).filter(name => name !== null);
+                    row += `<td>${result.join(', ')}</td>`;
+                    row += '</tr>';
+                    resultsTable.innerHTML += row;
+                }
+            })
+            .catch(error => console.error('Error in auto-checking ECG:', error));
+    }
+
+
+</script>
+
+{% endblock %}

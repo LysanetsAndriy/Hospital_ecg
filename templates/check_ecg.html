@@ -1,0 +1,97 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<style>
+    .hidden {
+        display: none;
+    }
+    .btn-section {
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="btn-section">
+    <button id="btn-ecgs" onclick="showECGs()" class="btn btn-secondary">Незалежні ЕКГ</button>
+    <button id="btn-appointments" onclick="showAppointments()" class="btn btn-secondary">ЕКГ прив'язані до зустрічі</button>
+</div>
+
+<div id="ecgs-section">
+    <h2>Незалежні ЕКГ</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Дата і час завантаження</th>
+                <th>Результат</th>
+                <th>Дія</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ecg in ecgs %}
+                {% if not ecg.appointment %}
+                    <tr>
+                        <td>{{ ecg.datetime }}</td>
+                        <td>{% if ecg.results == None %} - {% else %} {{ ecg.results }} {% endif %}</td>
+                        <td>
+                            <form action="{{ url_for('ecg', id=ecg.id) }}" method="GET">
+                                <button type="submit" class="btn btn-primary">Перевірити</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="appointments-section" class="hidden">
+    <h2>ЕКГ прив'язані до зустрічі</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ПІБ пацієнта</th>
+                <th>Дата і час</th>
+                <th>Місце</th>
+                <th>Статус</th>
+                <th>Результат</th>
+                <th>Дія</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for appointment in appointments %}
+                <tr>
+                    <td>{{ appointment.user.surname + ' ' + appointment.user.name + ' ' + appointment.user.patronymic  }}</td>
+                    <td>{{ appointment.date_time }}</td>
+                    <td>{{ appointment.location }}</td>
+                    <td>{{ appointment.status }}</td>
+                    <td>{% if appointment.ecg.results == None %} - {% else %} {{ appointment.ecg.results }} {% endif %}</td>
+                    <td>
+                        {% if appointment.ecg %}
+                                <form action="{{ url_for('ecg', id=appointment.ecg.id) }}" method="GET">
+                                    <button type="submit" class="btn btn-primary">Перевірити</button>
+                                </form>
+                        {% else %}
+                            No ECG Uploaded
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function showECGs() {
+        document.getElementById('ecgs-section').style.display = 'block';
+        document.getElementById('appointments-section').style.display = 'none';
+    }
+
+    function showAppointments() {
+        document.getElementById('ecgs-section').style.display = 'none';
+        document.getElementById('appointments-section').style.display = 'block';
+    }
+
+    // Trigger ECGs display on page load
+    window.onload = showECGs;
+</script>
+
+{% endblock %}

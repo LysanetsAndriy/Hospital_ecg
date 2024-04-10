@@ -1,0 +1,63 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<style>
+    /* Existing styles here */
+    /* Add new styles for appointment tables and file upload */
+    .table-responsive {
+        margin-bottom: 20px;
+    }
+
+    .upload-section {
+        margin-top: 30px;
+    }
+</style>
+
+<h1>Завантажити ЕКГ</h1>
+
+<div class="upload-section">
+    <h2>Завантажити файл ЕКГ незалежно від пацієнта:</h2>
+    <form method="POST" action="{{ url_for('upload_ecg') }}" enctype="multipart/form-data">
+        <input type="file" name="ecg_file" required>
+        <button type="submit" class="btn btn-primary">Завантажити ЕКГ</button>
+    </form>
+    <hr>
+    <h2>Завантажити файл ЕКГ для зустрічі з пацієнтом:</h2>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ПІБ пацієнта</th>
+                    <th>Дата і час</th>
+                    <th>Місце</th>
+                    <th>Дія</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appointment in appointments %}
+                <tr>
+                    <td>{{ appointment.user.surname + ' ' + appointment.user.name + ' ' + appointment.user.patronymic }}</td>
+                    <td>{{ appointment.date_time }}</td>
+                    <td>{{ appointment.location }}</td>
+                    {% if appointment.ecg %}
+                        <td>ЕКГ завантажено</td>
+                    {% else %}
+                        <td>
+                            <form method="POST" action="{{ url_for('upload_ecg') }}" enctype="multipart/form-data">
+                                <input type="hidden" name="user_id" value="{{ appointment.user.id }}">
+                                <input type="hidden" name="appointment_id" value="{{ appointment.id }}">
+                                <input type="file" name="ecg_file" required>
+                                <button type="submit" class="btn btn-primary">Завантажити ЕКГ</button>
+                            </form>
+                        </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
+</div>
+
+{% endblock %}

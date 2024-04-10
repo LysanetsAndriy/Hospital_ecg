@@ -115,70 +115,31 @@
             <th>Дія</th>
         </tr>
         {% for hospital in hospitals %}
-            <tr>
-                <td>{{ hospital.name }}</td>
-                <td>{{ hospital.location }}</td>
-                <td>{{ hospital.contact_number }}</td>
-                <td>
-                    <form id="choose_hospital_{{ hospital.id }}" action="{{ url_for('add_appointment', id=hospital.id) }}" method="POST">
-                        <input type="button" value="Обрати" class="btn btn-primary" onclick="chooseDoctor('choose_hospital_{{ hospital.id }}', {{ hospital.id }})">
-                    </form>
-                </td>
-            </tr>
-        {% endfor %}
+        <tr>
+            <td>{{ hospital.name }}</td>
+            <td>{{ hospital.location }}</td>
+            <td>{{ hospital.contact_number }}</td>
+            <td>
+                <a href="{{ url_for('choose_hospital', hospital_id=hospital.id) }}" class="btn btn-primary">Вибрати</a>
+            </td>
+        </tr>
+    {% endfor %}
     </table>
 
-    <div id="chooseModal" class="modal">
-        <div class="modal-content">
-            <h1>Оберіть лікаря з обраної вами лікарні:</h1>
-            <table class="table table-striped">
-                <tr>
-                    <th>Прізвище</th>
-                    <th>Ім'я</th>
-                    <th>По батькові</th>
-                    <th>Номер телефону</th>
-                    <th>Електронна пошта</th>
-                    <th></th>
-                </tr>
-                {% for doctor in doctors %}
-                    {% if doctor.hospital_id == 1 %}
-                        <tr>
-                            <td>{{ doctor.surname }}</td>
-                            <td>{{ doctor.name }}</td>
-                            <td>{{ doctor.patronymic }}</td>
-                            <td>{{ doctor.phone_number }}</td>
-                            <td>{{ doctor.email }}</td>
-                            <td>{{ hospitalId }}</td>
-                            <td>
-                                <form id="chooseDoctorModal" action="{{ url_for('choose_hospital', id=doctor.hospital_id) }}" method="POST">
-                                    <input type="hidden" name="doctor_id" value="{{ doctor.id }}">
-                                    <input type="submit" value="Обрати" class="btn btn-primary">
-                                </form>
-
-                            </td>
-                        </tr>
-                    {% endif %}
-                {% endfor %}
-            </table>
-            <span class="close" onclick="closeModalHospital()">&times;</span>
-        </div>
-    </div>
 
     <script>
-        function chooseDoctor(formId, hospitalId)
-        {
-            var chooseModal = document.getElementById('chooseModal');
-            chooseModal.style.display = 'block';
-            chooseModal.dataset.hospitalId = hospitalId; // Use dataset to set the data attribute
-
-            var chooseDoctorModalForm = document.getElementById('chooseDoctorModal');
-            chooseDoctorModalForm.action = document.getElementById(formId).action;
-            chooseDoctorModalForm.dataset.hospitalId = hospitalId;
-            chooseDoctorModalForm.action = chooseDoctorModalForm.action.replace('/add_appointment', '/choose_hospital/' + hospitalId);
+        function openDoctorModal(hospitalId) {
+            // Fetch doctors from the server
+            fetch(`/choose_hospital/${hospitalId}`)
+                .then(response => response.text())
+                .then(html => {
+                    // Assuming you have a modal element in your HTML
+                    document.getElementById('chooseModal').innerHTML = html;
+                    document.getElementById('chooseModal').style.display = 'block';
+                });
         }
 
-        function closeModalHospital()
-        {
+        function closeModalHospital() {
             document.getElementById('chooseModal').style.display = 'none';
         }
     </script>

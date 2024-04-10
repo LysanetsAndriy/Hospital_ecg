@@ -1,0 +1,25 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="container">
+    <h2>Select a Hospital for the Doctor</h2>
+    <table class="table">
+        <tr>
+            <th>Hospital Name</th>
+            <th>Address</th>
+            <th>Actions</th>
+        </tr>
+        {% for hospital in hospitals %}
+        <tr>
+            <td>{{ hospital.name }}</td>
+            <td>{{ hospital.location }}</td>
+            <td>
+                <form action="{{ url_for('promote_to_doctor', user_id=user_id, hospital_id=hospital.id) }}" method="POST">
+                    <button type="submit" class="btn btn-primary">Select</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

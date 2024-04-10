@@ -69,27 +69,26 @@
     }
     </style>
 
-    <h1>Записи до лікаря</h1>
-    <h2><small>Ваші записи:</small></h2>
-    <a class="btn btn-secondary" href="/add_appointment">Записатись</a>
+    <h1>Записи пацієнтів</h1>
+    <h2><small>Записи до Вас:</small></h2>
     <hr>
     <table class="table table-striped">
         <tr>
             <th>Лікарня</th>
             <th>Місце</th>
             <th>Дата</th>
-            <th>Лікар</th>
+            <th>Пацієнт</th>
             <th>Статус</th>
             <th>Деталі</th>
-            <th>Видалити</th> <!-- New column for delete button -->
+            <th>Видалити</th>
         </tr>
         {% for appointment in appointments %}
-            {% if appointment.user_id == session['user_id'] %}
+            {% if appointment.doctor_id == session['user_id'] %}
                 <tr>
-                    <td>{{ hospitals[id == doctors[id == appointment.doctor_id].hospital_id].name }}</td>
+                    <td>{{ hospitals[id == doctor.hospital_id].name }}</td>
                     <td>{{ appointment.location }}</td>
                     <td>{% if appointment.date_time == None %} - {% else %} {{ appointment.date_time }} {% endif %}</td>
-                    <td>{{ doctors[id == appointment.doctor_id].surname + ' ' + doctors[id == appointment.doctor_id].name + ' ' + doctors[id == appointment.doctor_id].patronymic}}</td>
+                    <td>{{ users[id == appointment.user_id].surname + ' ' + users[id == appointment.user_id].name + ' ' + users[id == appointment.user_id].patronymic}}</td>
                     <td>{{ appointment.status }}</td>
                     <td><a class="btn btn-primary" href="{{ url_for('appointment', id=appointment.id) }}">Деталі</a></td>
                     <td>

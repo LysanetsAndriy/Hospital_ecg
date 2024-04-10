@@ -68,6 +68,7 @@
 
     }
 
+
     h1 {
             font-family: Times New Roman, sans-serif;
             font-size: 40px;
@@ -105,8 +106,8 @@
                         <input type="button" value="Delete" class="btn btn-danger" onclick="confirmDelete('delete_user_{{ user.id }}')">
                     </form>
                     <td>
-                        <form id="promote_to_doctor_{{ user.id }}" action="{{ url_for('promote_to_doctor', id=user.id) }}" method="POST">
-                            <input type="button" value="Make Doctor" class="btn btn-primary" onclick="chooseHospital('promote_to_doctor_{{ user.id }}', {{ user.id }})">
+                        <form action="{{ url_for('select_hospital_for_doctor', user_id=user.id) }}" method="GET">
+                            <button type="submit" style="background-color:green">Make Doctor</button>
                         </form>
                     </td>
                 </td>
@@ -145,34 +146,7 @@
         {% endfor %}
     </table>
 
-    <div id="chooseModal" class="modal">
-        <div class="modal-content">
-            <h1>Оберіть лікарню в яку буде додано обраного лікаря:</h1>
-            <table class="table table-striped">
-                <tr>
-                    <th>Назва</th>
-                    <th>Адреса</th>
-                    <th>Телефон</th>
-                    <th></th>
-                </tr>
-                {% for hospital in hospitals %}
-                    <tr>
-                        <td>{{ hospital.name }}</td>
-                        <td>{{ hospital.location }}</td>
-                        <td>{{ hospital.contact_number }}</td>
-                        <td>
-                            <form id="chooseHospitalModal" action="{{ url_for('promote_to_doctor', id=user_id) }}" method="POST">
-                                <input type="hidden" name="hospital_id" value="{{ hospital.id }}">
-                                <input type="submit" value="Обрати" class="btn btn-primary">
-                            </form>
 
-                        </td>
-                    </tr>
-                {% endfor %}
-            </table>
-            <span class="close" onclick="closeModalDoctor()">&times;</span>
-        </div>
-    </div>
 
     <div id="confirmModal" class="modal">
         <div class="modal-content">

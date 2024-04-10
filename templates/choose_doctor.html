@@ -1,0 +1,43 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+    <style>
+        h1 {
+            font-family: Times New Roman, sans-serif;
+            font-size: 40px;
+            color: #333;
+        }
+    </style>
+
+    <div class="container">
+        <h1>Оберіть лікаря з цієї лікарні: {{ hospital.name }}</h1>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ПІБ</th>
+                    <th>Електронна пошта</th>
+                    <th>номер телефону</th>
+                    <th>Дія</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doctor in doctors %}
+                <tr>
+                    <td>{{ doctor.surname }} {{ doctor.name }} {{ doctor.patronymic }}</td>
+                    <td>{{ doctor.email }}</td>
+                    <td>{{ doctor.phone_number }}</td>
+                    <td>
+                        <form action="{{ url_for('book_appointment', doctor_id=doctor.id) }}" method="POST">
+                            <button type="submit" class="btn btn-primary">Обрати</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+{% endblock %}

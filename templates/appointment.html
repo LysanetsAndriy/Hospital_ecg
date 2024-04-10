@@ -1,0 +1,61 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="container">
+        <div class="card">
+            <div class="card-body">
+                <h5>Деталі Запису</h5>
+                <p class="card-text mb-2 ">Дата і час: {{ appointment.date_time or "Лікар досі не призначив час зустрічі" }}</p>
+                <p class="card-text">Місце: {{ appointment.location }}</p>
+                <p class="card-text">Статус: {{ appointment.status }}</p>
+                <hr>
+                {% if session['role'] == 'user' %}
+                    <h5>Деталі Лікаря</h5>
+                    <p>ПІБ: {{ doctor.surname }} {{ doctor.name }} {{ doctor.patronymic }}</p>
+                    <p>Електронна пошта: {{ doctor.email }}</p>
+                    <p>Номер телефону: {{ doctor.phone_number }}</p>
+                {% elif session['role'] == 'doctor' %}
+                    <h5>Змінити дату і час</h5>
+                    <form action="{{ url_for('set_appointment_time', appointment_id=appointment.id) }}" method="post">
+                        <input type="datetime-local" name="appointment_time" required>
+                        <button type="submit" class="btn btn-primary">Зберегти</button>
+                    </form>
+                    <button type="button" class="btn btn-danger" onclick="confirmDecline()">Відхилити Запис</button>
+                    <hr>
+                    <h5>Деталі Пацієнта</h5>
+                    <p>ПІБ: {{ user.surname }} {{ user.name }} {{ user.patronymic }}</p>
+                    <p>Електронна пошта: {{ user.email }}</p>
+                    <p>Номер телефону: {{ user.phone_number }}</p>
+                {% elif session['role'] == 'admin' %}
+                    <h5>Деталі Лікаря</h5>
+                    <p>ПІБ: {{ doctor.surname }} {{ doctor.name }} {{ doctor.patronymic }}</p>
+                    <p>Електронна пошта: {{ doctor.email }}</p>
+                    <p>Номер телефону: {{ doctor.phone_number }}</p>
+                    <hr>
+                    <h5>Деталі Пацієнта</h5>
+                    <p>ПІБ: {{ user.surname }} {{ user.name }} {{ user.patronymic }}</p>
+                    <p>Електронна пошта: {{ user.email }}</p>
+                    <p>Номер телефону: {{ user.phone_number }}</p>
+                {% endif %}
+                <hr>
+                <h5>Деталі ЕКГ</h5>
+                <p class="card-text mb-2 ">Дата і час завантаження ЕКГ: {{ ecg.datetime or "ЕКГ досі не завантажене" }}</p>
+                <p class="card-text">Результат: {{ ecg.results or "ЕКГ досі не перевірене" }}</p>
+
+                <hr>
+                <h5>Деталі Лікарні</h5>
+                <p>Назва: {{ hospital.name }}</p>
+                <p>Телефон: {{ hospital.contact_number }}</p>
+
+
+            </div>
+        </div>
+</div>
+<script>
+function confirmDecline() {
+    if (confirm('Ви впевнені що хочете відхилити цю зустріч?')) {
+        window.location.href = "{{ url_for('decline_appointment', appointment_id=appointment.id) }}";
+    }
+}
+</script>
+{% endblock %}
