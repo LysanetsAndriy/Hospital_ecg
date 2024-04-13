@@ -6,7 +6,7 @@
             <div class="card-body">
                 <h5>Деталі Запису</h5>
                 <p class="card-text mb-2 ">Дата і час: {{ appointment.date_time or "Лікар досі не призначив час зустрічі" }}</p>
-                <p class="card-text">Місце: {{ appointment.location }}</p>
+                <p class="card-text">Місце: {{ appointment.location or "" }}</p>
                 <p class="card-text">Статус: {{ appointment.status }}</p>
                 <hr>
                 {% if session['role'] == 'user' %}

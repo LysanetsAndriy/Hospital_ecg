@@ -9,9 +9,6 @@
         <li class="nav-item">
           <a class="nav-link" aria-current="page" href="/">Головна</a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/about">Про нас</a>
-        </li>
       </ul>
       {% if session.logged_in %}
           {% if session.role == 'user' %}
@@ -33,7 +30,7 @@
                 <a href="/hospitals" class="btn btn-primary me-2" role="button">Лікарні</a>
                 <a href="/users" class="btn btn-primary me-2" role="button">Користувачі</a>
                 <a href="/profile" class="btn btn-primary me-2" role="button">Профіль</a>
-                <a href="/dashboard" class="btn btn-primary me-2" role="button">Записи</a>
+                <a href="/statistics" class="btn btn-primary me-2" role="button">Статистика</a>
                 <a href="/logout" class="btn btn-primary me-2" role="button">Вийти</a>
               </div>
 
