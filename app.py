@@ -1064,7 +1064,8 @@ def import_hospitals():
     if file.filename == '':
         flash('No selected file', 'danger')
         return redirect(url_for('hospitals'))
-    if file and allowed_file(file.filename):
+    print(file.filename, allowed_file(file.filename))
+    if file and not allowed_file(file.filename):
         try:
             df = pd.read_excel(file)
             errors = validate_and_import(df)
