@@ -1203,7 +1203,7 @@ def upload_ecg_report():
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        file_path = os.path.join('report_files', filename)
+        file_path = os.path.join('', filename)
         file.save(file_path)
 
         try:
