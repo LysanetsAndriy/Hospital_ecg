@@ -103,11 +103,11 @@
                 <td>
                     <form id="delete_user_{{ user.id }}" action="{{ url_for('confirm_delete_user', id=user.id) }}" method="POST">
                         <input type="hidden" name="_method" value="DELETE">
-                        <input type="button" value="Delete" class="btn btn-danger" onclick="confirmDelete('delete_user_{{ user.id }}')">
+                        <input type="button" value="Видалити" class="btn btn-danger" onclick="confirmDelete('delete_user_{{ user.id }}')">
                     </form>
                     <td>
                         <form action="{{ url_for('select_hospital_for_doctor', user_id=user.id) }}" method="GET">
-                            <button type="submit" style="background-color:green">Make Doctor</button>
+                            <button type="submit" style="background-color:green">Зробити лікарем</button>
                         </form>
                     </td>
                 </td>
@@ -123,12 +123,11 @@
                 <td>
                     <form id="delete_doctor_{{ doctor.id }}" action="{{ url_for('confirm_delete_doctor', id=doctor.id) }}" method="POST">
                         <input type="hidden" name="_method" value="DELETE">
-                        <input type="button" value="Delete" class="btn btn-danger" onclick="confirmDelete('delete_doctor_{{ doctor.id }}')">
+                        <input type="button" value="Видалити" class="btn btn-danger" onclick="confirmDelete('delete_doctor_{{ doctor.id }}')">
                     </form>
                     <td>
                         <form id="demote_to_user_{{ doctor.id }}" action="{{ url_for('demote_to_user', id=doctor.id) }}" method="POST">
-                            <input type="button" value="Make User" class="btn btn-secondary" onclick="confirmDelete('demote_to_user_{{ doctor.id }}')">
-<!--                            <input type="submit" value="Make User" class="btn btn-secondary">-->
+                            <input type="button" value="Зробити Користувачем" class="btn btn-secondary" onclick="confirmDelete('demote_to_user_{{ doctor.id }}')">
                         </form>
                     </td>
                 </td>
@@ -141,6 +140,7 @@
                 <td>{{ admin.patronymic }}</td>
                 <td>{{ admin.email }}</td>
                 <td>Адмін</td>
+                <td></td>
                 <td></td>
             </tr>
         {% endfor %}

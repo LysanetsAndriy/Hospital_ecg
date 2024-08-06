@@ -108,6 +108,11 @@
     </style>
     <h1><strong>Лікарні</strong></h1>
     <a class="btn btn-secondary" href="/add_hospital">Додати лікарню</a>
+    <a class="btn btn-success" href="{{ url_for('export_hospitals') }}">Експорт</a>
+    <form action="{{ url_for('import_hospitals') }}" method="post" enctype="multipart/form-data" style="display: inline-block;">
+        <input type="file" name="file" id="file" style="display: none;" onchange="this.form.submit();">
+        <label for="file" class="btn btn-primary">Імпорт</label>
+    </form>
     <h2>Список лікарень:</h2>
     <form action="{{ url_for('hospitals') }}" method="GET" class="search-form">
         <input type="text" name="search" placeholder="Знайти лікарні" class="search-input">
@@ -121,12 +126,15 @@
             <th>Адреса</th>
             <th>Телефон</th>
             <th></th>
+            <th></th>
         </tr>
         {% for hospital in hospitals %}
             <tr>
                 <td>{{ hospital.name }}</td>
                 <td>{{ hospital.location }}</td>
                 <td>{{ hospital.contact_number }}</td>
+                <td>
+                    <a href="{{ url_for('edit_hospital', id=hospital.id) }}" class="btn btn-primary">Редагувати</a>
                 <td>
                     <form id="delete_hospital_{{ hospital.id }}" action="{{ url_for('confirm_delete_hospital', id=hospital.id) }}" method="POST">
                         <input type="button" value="Delete" class="btn btn-danger" onclick="confirmDelete('delete_hospital_{{ hospital.id }}')">

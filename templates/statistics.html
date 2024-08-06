@@ -1,0 +1,67 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<style>
+    .chart-container {
+        display: grid;
+        grid-template-columns: 2fr 1fr; /* Creates two columns of equal width */
+        gap: 20px; /* Adds space between the columns */
+    }
+
+    .chart-box {
+        margin: 10px; /* Adds a bit of margin inside the grid items */
+    }
+</style>
+<div class="container">
+    <h1>Статистика</h1>
+    <a class="btn btn-success" href="{{ url_for('generate_ecg_report') }}">Завантажити звіт по ЕКГ за останнцій місяць</a>
+    <form action="{{ url_for('upload_ecg_report') }}" method="post" enctype="multipart/form-data">
+        <input type="file" name="report" required>
+        <input type="submit" value="Upload">
+    </form>
+    <div class="chart-container">
+        <div class="chart-box">
+            <h2>Результати ЕКГ</h2>
+            <canvas id="ecgOutcomesChart"></canvas>
+        </div>
+        <div class="chart-box">
+            <h2>Кількість записів по лікарнях</h2>
+            <canvas id="hospitalAppointmentsChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // ECG Outcomes Chart
+    const ecgOutcomesCtx = document.getElementById('ecgOutcomesChart').getContext('2d');
+    const ecgOutcomesChart = new Chart(ecgOutcomesCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ outcomes.keys() | list | tojson }},
+            datasets: [{
+                label: 'Результати ЕКГ',
+                data: {{ outcomes.values() | list | tojson }},
+                backgroundColor: 'blue' // Or any other color or array of colors
+            }]
+        }
+    });
+
+    // Hospital Appointments Chart
+    const hospitalAppointmentsCtx = document.getElementById('hospitalAppointmentsChart').getContext('2d');
+    const hospitalAppointmentsChart = new Chart(hospitalAppointmentsCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ hospital_appointments | map(attribute='name') | list | tojson }},
+            datasets: [{
+                label: 'Appointments by Hospital',
+                data: {{ hospital_appointments | map(attribute='appointments_count') | list | tojson }},
+                backgroundColor: [
+                    'red', 'blue', 'green', 'yellow', 'purple', 'orange', 'black', 'magenta', 'gray' // Colors for each hospital
+                ]
+            }]
+        }
+    });
+</script>
+
+{% endblock %}

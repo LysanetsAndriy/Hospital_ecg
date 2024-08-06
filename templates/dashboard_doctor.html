@@ -85,10 +85,10 @@
         {% for appointment in appointments %}
             {% if appointment.doctor_id == session['user_id'] %}
                 <tr>
-                    <td>{{ hospitals[id == doctor.hospital_id].name }}</td>
-                    <td>{{ appointment.location }}</td>
+                    <td>{{ appointment.doctor.hospital.name }}</td>
+                    <td>{{ appointment.doctor.hospital.location }}</td>
                     <td>{% if appointment.date_time == None %} - {% else %} {{ appointment.date_time }} {% endif %}</td>
-                    <td>{{ users[id == appointment.user_id].surname + ' ' + users[id == appointment.user_id].name + ' ' + users[id == appointment.user_id].patronymic}}</td>
+                    <td>{{ appointment.user.surname + ' ' + appointment.user.name + ' ' + appointment.user.patronymic}}</td>
                     <td>{{ appointment.status }}</td>
                     <td><a class="btn btn-primary" href="{{ url_for('appointment', id=appointment.id) }}">Деталі</a></td>
                     <td>

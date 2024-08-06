@@ -6,7 +6,6 @@ db = SQLAlchemy()
 
 # MySQL database URL
 database_url = 'mysql://root:password@localhost/hospital_ecg'
-#app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 # Initialize SQLAlchemy
 db.init_app(app)

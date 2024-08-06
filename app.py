@@ -2,14 +2,23 @@ from flask import Flask, render_template, jsonify, flash, redirect, url_for, ses
 from flask import send_file, abort
 from flask_mail import Mail, Message
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import aliased
+from sqlalchemy import func
 from sqlalchemy import not_
 from wtforms import Form, StringField, SelectField, DateTimeField, PasswordField, validators
 from passlib.hash import sha256_crypt
 from functools import wraps
 from datetime import datetime as dt
+from datetime import timedelta
+from werkzeug.utils import secure_filename
 import pytz
 import random
 import string
+from collections import Counter
+import pandas as pd
+import re
+from docx import Document
+import os
 
 from io import BytesIO
 import io
@@ -26,6 +35,12 @@ import h5py
 import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras.optimizers import Adam
+
+app.jinja_env.tests['equalto'] = lambda value, other : value == other
+
+# Aliases for readability in the join
+UserAlias = aliased(User)
+DoctorAlias = aliased(Doctor)
 
 # Connect to the database
 engine = create_engine(database_url)
@@ -52,14 +67,11 @@ app.config['MAIL_PASSWORD'] = 'gdbk efjw clpp edgf'
 
 mail = Mail(app)
 
+ALLOWED_EXTENSIONS = {'docx'}
+
 @app.route('/')
 def index():
     return render_template('home.html')
-
-
-@app.route('/about')
-def about():
-    return render_template('about.html')
 
 
 # Register class
@@ -193,7 +205,7 @@ def login():
             session['role'] = role
 
             flash('Ви увійшли', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('index'))
         else:
             error = 'Неправильний пароль'
             return render_template('login.html', error=error)
@@ -221,8 +233,8 @@ def is_user(f):
         if session['role'] == 'user':
             return f(*args, **kwargs)
         else:
-            flash('Ви не маєте доступу до цієї сторінки', 'danger')
-            return redirect(url_for('dashboard'))
+            flash('Ви не маєте доступу до цієї сторінки!', 'danger')
+            return redirect(url_for('index'))
 
     return wrap
 
@@ -235,7 +247,7 @@ def is_doctor(f):
             return f(*args, **kwargs)
         else:
             flash('Ви не маєте доступу до цієї сторінки', 'danger')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('index'))
 
     return wrap
 
@@ -248,7 +260,19 @@ def is_admin(f):
             return f(*args, **kwargs)
         else:
             flash('Ви не маєте доступу до цієї сторінки', 'danger')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('index'))
+
+    return wrap
+
+
+def is_doctor_or_user(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if session['role'] == 'doctor' or session['role'] == 'user':
+            return f(*args, **kwargs)
+        else:
+            flash('Ви не маєте доступу до цієї сторінки', 'danger')
+            return redirect(url_for('index'))
 
     return wrap
 
@@ -264,6 +288,7 @@ def logout():
 
 @app.route('/dashboard')
 @is_logged_in
+@is_doctor_or_user
 def dashboard():
     if session['role'] == 'doctor':
         doctor = Doctor.query.filter_by(id=session['user_id']).first()
@@ -271,17 +296,19 @@ def dashboard():
         users = User.query.all()
         hospitals = Hospital.query.all()
         if appointments:
-            return render_template("dashboard_doctor.html", users=users, doctor=doctor, appointments=appointments, hospitals=hospitals)
+            return render_template("dashboard_doctor.html", users=users, doctor=doctor,
+                                   appointments=appointments, hospitals=hospitals)
         else:
             msg = 'До вас ще не записувались пацієнти'
             return render_template("dashboard_doctor.html", msg=msg)
-    elif session['role'] == 'user' or session['role'] == 'admin':
+    elif session['role'] == 'user':
         # Query appointments for the current user
         appointments = Appointment.query.filter_by(user_id=session['user_id']).all()
         hospitals = Hospital.query.all()
         doctors = Doctor.query.all()
         if appointments:
-            return render_template("dashboard.html", appointments=appointments, hospitals=hospitals, doctors=doctors)
+            return render_template("dashboard.html", appointments=appointments, hospitals=hospitals,
+                                   doctors=doctors)
         else:
             msg = 'У вас ще не було записів до лікарів'
             return render_template("dashboard.html", msg=msg)
@@ -474,39 +501,89 @@ def hospitals():
 
 class AddHospitalForm(Form):
     name = StringField('Назва', [validators.Length(min=1, max=150)])
-    location = StringField('Адреса', [validators.Length(min=1, max=255)])
-    contact_number = StringField('Номер телефону', [validators.Length(min=1, max=20)])
+    location = StringField('Адреса', [
+        validators.Regexp(r'^вулиця [^\,]+, \d+, [^\,]+$',
+                          message='Адреса повинна бути у форматі: "вулиця *назва вулиці*, *номер будинку*, *місто*"')
+    ])
+    contact_number = StringField('Номер телефону', [
+        validators.Regexp(r'^\+38\(\d{3}\)\d{3}-\d{2}-\d{2}$',
+                          message='Номер телефону повинен мати формат +38(XXX)XXX-XX-XX')
+    ])
 
 
 @app.route('/add_hospital', methods=['GET', 'POST'])
 @is_logged_in
 @is_admin
 def add_hospital():
-    if session['role'] == 'admin':
-        form = AddHospitalForm(request.form)
-        if request.method == 'POST' and form.validate():
-            name = form.name.data
-            location = form.location.data
-            contact_number = form.contact_number.data
-            new_hospital = Hospital(name=name, location=location, contact_number=contact_number)
-            db.session.add(new_hospital)
-            db.session.commit()
-            flash('Лікарня додана', 'success')
-            return redirect(url_for('hospitals'))
-        return render_template('add_hospital.html', form=form)
-    else:
+    form = AddHospitalForm(request.form)
+    if request.method == 'POST' and form.validate():
+        name = form.name.data
+        location = form.location.data
+        contact_number = form.contact_number.data
+        new_hospital = Hospital(name=name, location=location, contact_number=contact_number)
+        db.session.add(new_hospital)
+        db.session.commit()
+        flash('Лікарня додана', 'success')
         return redirect(url_for('hospitals'))
+    return render_template('add_hospital.html', form=form)
 
 
-@app.route('/delete_hospital/<id>', methods=['POST'])
+@app.route('/delete_hospital/<int:id>', methods=['GET', 'POST'])
 @is_logged_in
 @is_admin
 def delete_hospital(id):
-    hospital = Hospital.query.get(id)
+    hospital = Hospital.query.get_or_404(id)
     if hospital:
+        # Process each doctor related to the hospital
+        doctors = Doctor.query.filter_by(hospital_id=hospital.id).all()
+        for doctor in doctors:
+            appointments = Appointment.query.filter_by(doctor_id=doctor.id).all()
+            for appointment in appointments:
+                if appointment.status != 'Перевірено':
+                    appointment.status = 'Відхилено'
+                appointment.location = None
+                appointment.doctor_id = None
+                db.session.commit()
+
+            ecgs = ECG.query.filter_by(doctor_id=doctor.id).all()
+            for ecg in ecgs:
+                # Delete independent ECGs not linked to any user
+                if ecg.user_id is None:
+                    if ecg.ecg_file:
+                        file_id = ecg.ecg_file.split('/')[-2]  # Assuming ecg.ecg_file stores the file ID
+                        if delete_file_from_google_drive(file_id):
+                            ecg.ecg_file = None
+                    db.session.delete(ecg)
+                else:
+                    ecg.doctor_id = None
+                    db.session.commit()
+
+            # Convert doctors to users if necessary or delete them
+            new_user = User(name=doctor.name, surname=doctor.surname, patronymic=doctor.patronymic,
+                            gender=doctor.gender, email=doctor.email, password=doctor.password,
+                            phone_number=doctor.phone_number)
+            db.session.add(new_user)
+            db.session.delete(doctor)
+            db.session.commit()
+
+        # Delete the hospital
         db.session.delete(hospital)
         db.session.commit()
+        flash('Hospital and all related data safely updated.', 'success')
+    else:
+        flash('Hospital not found.', 'danger')
+
     return redirect(url_for('hospitals'))
+
+
+def delete_file_from_google_drive(file_id):
+    try:
+        google_drive_service = GoogleDriveService().build()
+        google_drive_service.files().delete(fileId=file_id).execute()
+        return True
+    except Exception as e:
+        print(f"Failed to delete file: {e}")
+        return False
 
 
 @app.route('/confirm_delete_hospital/<id>', methods=['POST'])
@@ -520,11 +597,7 @@ def confirm_delete_hospital(id):
         # Verify password here
         password = request.form.get('password')
         if sha256_crypt.verify(password, password_hash):
-            hospital = Hospital.query.get(id)
-            if hospital:
-                db.session.delete(hospital)
-                db.session.commit()
-            return redirect(url_for('hospitals'))
+            return redirect(url_for('delete_hospital', id=id))
         else:
             flash('Неправильний пароль. Видалення скасовано.')
             return redirect(url_for('hospitals'))
@@ -672,8 +745,14 @@ def book_appointment(doctor_id):
 def appointment(id):
     appointment = Appointment.query.filter_by(id=id).first()
     if appointment:
-        doctor = Doctor.query.filter_by(id=appointment.doctor_id).first()
-        hospital = Hospital.query.filter_by(id=doctor.hospital_id).first()
+        if not appointment.doctor_id:
+            doctor = None
+        else:
+            doctor = Doctor.query.filter_by(id=appointment.doctor_id).first()
+        if doctor == None:
+            hospital = None
+        else:
+            hospital = Hospital.query.filter_by(id=doctor.hospital_id).first()
         user = User.query.filter_by(id=appointment.user_id).first()
         ecg = ECG.query.filter_by(id=appointment.ecg_id).first()
         return render_template('appointment.html', appointment=appointment, user=user, doctor=doctor, hospital=hospital, ecg=ecg)
@@ -791,6 +870,16 @@ def upload_ecg():
         return render_template('upload_ecg.html', users=users, appointments=appointments)
 
 
+def delete_file_from_google_drive(file_id):
+    try:
+        google_drive_service = GoogleDriveService().build()
+        google_drive_service.files().delete(fileId=file_id).execute()
+        return True
+    except Exception as e:
+        print(f"Failed to delete file: {e}")
+        return False
+
+
 # check_ecg route where the table with all ecgs is displayed
 @app.route('/check_ecg')
 @is_logged_in
@@ -799,7 +888,10 @@ def check_ecg():
     # Subquery to find all ecg_ID values in the appointment table
     subquery = db.session.query(Appointment.ecg_id).filter(Appointment.ecg_id == ECG.id).subquery()
     # Query to find all ECG records that are NOT IN the subquery results
-    ecgs = ECG.query.filter(not_(ECG.id.in_(subquery))).order_by(ECG.datetime.desc()).all()
+    ecgs = ECG.query.filter(
+        not_(ECG.id.in_(subquery)),
+        ECG.doctor_id == session['user_id']
+    ).order_by(ECG.datetime.desc()).all()
     appointments = Appointment.query.filter_by(doctor_id=session['user_id']).order_by(Appointment.date_time.desc()).all()
     return render_template('check_ecg.html', ecgs=ecgs, appointments=appointments)
 
@@ -908,6 +1000,243 @@ def auto_check(id):
         return jsonify(y_score.tolist())
     else:
         return jsonify([]), 404
+
+
+@app.route('/statistics')
+@is_logged_in
+@is_admin
+def statistics():
+    # Get all ECG records and split the results by comma to count each outcome
+    ecgs = ECG.query.all()
+    outcomes = Counter()
+    for ecg in ecgs:
+        if ecg.results:
+            for outcome in ecg.results.split(', '):
+                outcomes[outcome.strip()] += 1
+
+    # Get the number of users that had appointments in each hospital
+    hospital_appointments = db.session.query(Hospital.id, Hospital.name, db.func.count(Appointment.id).label('appointments_count')) \
+                                       .join(Doctor, Hospital.id == Doctor.hospital_id) \
+                                       .join(Appointment, Doctor.id == Appointment.doctor_id) \
+                                       .group_by(Hospital.id) \
+                                       .all()
+
+    return render_template('statistics.html', outcomes=outcomes, hospital_appointments=hospital_appointments)
+
+
+@app.route('/export_hospitals')
+@is_logged_in
+@is_admin
+def export_hospitals():
+    # Query hospital data from the database
+    hospitals = Hospital.query.all()
+    # Convert the hospital data to a pandas DataFrame
+    data = {
+        "Name": [hospital.name for hospital in hospitals],
+        "Location": [hospital.location for hospital in hospitals],
+        "ContactNumber": [hospital.contact_number for hospital in hospitals]
+    }
+    df = pd.DataFrame(data)
+
+    # Save the DataFrame to an Excel file in memory
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Hospitals')
+
+    # Rewind the buffer
+    output.seek(0)
+
+    # Send the file for download
+    return send_file(output, as_attachment=True, download_name='hospitals.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'xlsx'}
+
+
+@app.route('/import_hospitals', methods=['POST'])
+@is_logged_in
+@is_admin
+def import_hospitals():
+    if 'file' not in request.files:
+        flash('No file part', 'danger')
+        return redirect(url_for('hospitals'))
+    file = request.files['file']
+    if file.filename == '':
+        flash('No selected file', 'danger')
+        return redirect(url_for('hospitals'))
+    if file and not allowed_file(file.filename):
+        try:
+            df = pd.read_excel(file)
+            errors = validate_and_import(df)
+            if errors:
+                flash(f'Errors occurred: {", ".join(errors)}', 'danger')
+            else:
+                flash('Лікарні успішно завантажені', 'success')
+        except Exception as e:
+            flash(f'An error occurred while reading the file: {str(e)}', 'danger')
+    else:
+        flash('Invalid file type, please upload an Excel file.', 'danger')
+    return redirect(url_for('hospitals'))
+
+
+def validate_and_import(df):
+    errors = []
+    for index, row in df.iterrows():
+        name = row['Name']
+        location = row['Location']
+        contact_number = row['ContactNumber']
+
+        # Validate phone number
+        if not re.match(r'^\+38\(\d{3}\)\d{3}-\d{2}-\d{2}$', contact_number):
+            errors.append(f'Invalid contact number format at row {index + 1}')
+            continue
+
+        # Validate location
+        if not re.match(r'^вулиця [^\,]+, \d+, [^\,]+$', location):
+            errors.append(f'Invalid location format at row {index + 1}')
+            continue
+
+        # Check if hospital already exists
+        if not Hospital.query.filter_by(name=name, location=location, contact_number=contact_number).first():
+            new_hospital = Hospital(name=name, location=location, contact_number=contact_number)
+            db.session.add(new_hospital)
+
+    if not errors:
+        db.session.commit()
+
+    return errors
+
+
+@app.route('/edit_hospital/<int:id>', methods=['GET', 'POST'])
+@is_logged_in
+@is_admin
+def edit_hospital(id):
+    hospital = Hospital.query.get_or_404(id)
+    form = AddHospitalForm(request.form)
+
+    if request.method == 'POST' and form.validate():
+        hospital.name = form.name.data
+        hospital.location = form.location.data
+        hospital.contact_number = form.contact_number.data
+
+        db.session.commit()
+        flash('Лікарню оновлено', 'success')
+        return redirect(url_for('hospitals'))
+
+    form.name.data = hospital.name
+    form.location.data = hospital.location
+    form.contact_number.data = hospital.contact_number
+
+    return render_template('edit_hospital.html', form=form, hospital_id=hospital.id)
+
+
+@app.route('/generate_ecg_report')
+@is_logged_in
+@is_admin
+def generate_ecg_report():
+    # Calculate date range for the last 30 days
+    end_date = dt.today()  # Current date
+    start_date = end_date - timedelta(days=30)  # Date 30 days ago
+
+    # Query the database for ECG records within the last 30 days
+    ecgs = ECG.query \
+        .join(Doctor, ECG.doctor_id == Doctor.id) \
+        .join(User, ECG.user_id == User.id) \
+        .add_columns(User.name.label('patient_name'), User.surname.label('patient_surname'),
+                     User.patronymic.label('patient_patronymic'), ECG.datetime, Doctor.name.label('doctor_name'),
+                     Doctor.surname.label('doctor_surname'), Doctor.patronymic.label('doctor_patronymic'), ECG.results) \
+        .filter(ECG.datetime >= start_date, ECG.datetime <= end_date).all()
+
+    # Create a new Document
+    doc = Document()
+    doc.add_heading('ЕКГ звіт за останні 30 днів', level=1)
+    doc.add_paragraph(f'Звіт за період від: {start_date.strftime("%Y-%m-%d")} до {end_date.strftime("%Y-%m-%d")}')
+    # Add a table to the document
+    table = doc.add_table(rows=1, cols=4)
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = 'ПІБ пацієнта'
+    hdr_cells[1].text = 'Дата ЕКГ'
+    hdr_cells[2].text = 'ПІБ лікаря'
+    hdr_cells[3].text = 'Результат'
+
+    # Fill table with ECG data
+    for ecg in ecgs:
+        row_cells = table.add_row().cells
+        # Access the results directly since they are not attributes of an object
+        patient_full_name = f"{ecg.patient_surname} {ecg.patient_name} {ecg.patient_patronymic}"
+        doctor_full_name = f"{ecg.doctor_surname} {ecg.doctor_name} {ecg.doctor_patronymic}"
+
+        row_cells[0].text = patient_full_name
+        row_cells[1].text = ecg.datetime.strftime("%Y-%m-%d / %H:%M:%S")
+        row_cells[2].text = doctor_full_name
+        row_cells[3].text = ecg.results
+
+    # Save the document
+    file_path = "ECG_Report.docx"
+    doc.save(file_path)
+
+    # Send file to user
+    return send_file(file_path, as_attachment=True, download_name='Monthly_ECG_Report.docx')
+
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/upload_ecg_report', methods=['GET','POST'])
+@is_logged_in
+@is_admin
+def upload_ecg_report():
+    # Check if 'report' is in the files part of the request
+    if 'report' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+    file = request.files['report']
+    # If the user does not select a file, the browser submits an
+    # empty file without a filename.
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file_path = os.path.join('', filename)
+        file.save(file_path)
+        try:
+            doc = Document(file_path)
+            updated_records_count = 0
+            for table in doc.tables:
+                # Assume we are iterating over each row in the .docx table
+                for row in table.rows[1:]:  # Skip header row
+                    patient_full_name = row.cells[0].text.strip()
+                    date_of_ecg = row.cells[1].text.strip()
+                    doctor_full_name = row.cells[2].text.strip()
+                    outcome = row.cells[3].text.strip()
+                    # Parse the date string into a datetime object
+                    ecg_date = dt.strptime(date_of_ecg, "%Y-%m-%d / %H:%M:%S")
+                    # Find the ECG record using the parsed name parts and date
+                    ecg_record = ECG.query.where(ECG.datetime == ecg_date).first()
+                    # Update the record if it exists
+                    if ecg_record:
+                        ecg_record.results = outcome
+                        db.session.commit()
+                    else:
+                        continue
+                    updated_records_count += 1  # Increment the count of updated records
+            if updated_records_count == 0:
+                flash('There are no records that can be changed using the report', 'warning')
+            else:
+                flash(f'{updated_records_count} records have been updated from the report', 'success')
+        except Exception as e:
+            flash(str(e), 'danger')
+        # Finally, remove the uploaded file to clean up
+        os.remove(file_path)
+        return redirect(url_for('statistics'))  # Replace 'statistics' with the correct route for your statistics page
+    else:
+        flash('Invalid file type', 'danger')
+        return redirect(request.url)
 
 
 if __name__ == '__main__':
